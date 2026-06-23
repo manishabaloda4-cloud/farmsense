@@ -15,36 +15,18 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-.main-title {
-    font-size: 2.4rem; font-weight: 700; color: #1a5c38;
-    text-align: center; margin-bottom: 0.2rem; letter-spacing: -0.5px;
-}
-.subtitle {
-    text-align: center; color: #52796f; font-size: 1rem; margin-bottom: 2rem;
-}
-.agent-card {
-    background: #f0faf4; border-left: 5px solid #2d6a4f;
-    padding: 1.2rem 1.4rem; border-radius: 10px; margin-bottom: 1.2rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
+.main-title { font-size: 2.4rem; font-weight: 700; color: #1a5c38; text-align: center; margin-bottom: 0.2rem; letter-spacing: -0.5px; }
+.subtitle { text-align: center; color: #52796f; font-size: 1rem; margin-bottom: 2rem; }
+.agent-card { background: #f0faf4; border-left: 5px solid #2d6a4f; padding: 1.2rem 1.4rem; border-radius: 10px; margin-bottom: 1.2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
 .agent-card.weather { border-left-color: #1565c0; background: #e8f4fd; }
 .agent-card.market  { border-left-color: #c62828; background: #fff3e0; }
-.agent-label {
-    font-weight: 700; font-size: 0.78rem; text-transform: uppercase;
-    letter-spacing: 0.08em; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 6px;
-}
+.agent-label { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
 .agent-label.green  { color: #1a5c38; }
 .agent-label.blue   { color: #1565c0; }
 .agent-label.orange { color: #c62828; }
 .agent-body { font-size: 0.97rem; line-height: 1.75; color: #1a1a1a; }
-.badge {
-    display: inline-block; background: #e8f5e9; color: #2d6a4f;
-    font-size: 0.72rem; font-weight: 600; padding: 2px 10px;
-    border-radius: 20px; margin-bottom: 1.2rem;
-}
+.badge { display: inline-block; background: #e8f5e9; color: #2d6a4f; font-size: 0.72rem; font-weight: 600; padding: 2px 10px; border-radius: 20px; margin-bottom: 1.2rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -54,7 +36,13 @@ st.markdown('<div style="text-align:center"><span class="badge">🏆 Kaggle AI A
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    groq_api_key = st.text_input("Groq API Key", type="password", placeholder="gsk_...")
+
+    # Auto-load from Streamlit Cloud secrets, fallback to manual input
+    try:
+        groq_api_key = st.secrets["GROQ_API_KEY"]
+        st.success("API Key loaded!")
+    except Exception:
+        groq_api_key = st.text_input("Groq API Key", type="password", placeholder="gsk_...")
 
     st.markdown("### 📍 Your Location")
     city_list = sorted([c.title() for c in INDIA_CITIES.keys()])
@@ -118,10 +106,10 @@ ask_btn = st.button("🔍 Get Expert Advice", type="primary", use_container_widt
 
 if ask_btn:
     if not groq_api_key:
-        st.error("⚠️ Please enter your Groq API key in the sidebar.")
+        st.error("Please enter your Groq API key in the sidebar.")
         st.stop()
     if not farmer_query.strip():
-        st.warning("⚠️ Please describe your crop problem first.")
+        st.warning("Please describe your crop problem first.")
         st.stop()
 
     st.markdown("---")
@@ -131,19 +119,18 @@ if ask_btn:
         try:
             results = run_orchestrator(groq_api_key, farmer_query, selected_city)
         except Exception as e:
-            import traceback
-            st.error(f"❌ Error: {e}")
+            st.error(f"Error: {e}")
             st.stop()
 
-    crop     = results.get("crop_advice")
+    crop      = results.get("crop_advice")
     weather_a = results.get("weather_advice")
-    market   = results.get("market_advice")
+    market    = results.get("market_advice")
 
     if not crop and not weather_a and not market:
-        st.error("⚠️ All agents returned empty. Check your API key and try again.")
+        st.error("All agents returned empty. Check your API key and try again.")
         st.stop()
 
-    st.success("✅ Analysis complete! Here are your results:")
+    st.success("Analysis complete! Here are your results:")
 
     if crop:
         st.markdown(f"""
@@ -168,7 +155,7 @@ if ask_btn:
 
     lang = results.get("language", "en")
     if lang == "hi":
-        st.info("💬 Hindi query detected — all responses given in Hindi")
+        st.info("Hindi query detected — all responses given in Hindi")
 
     st.markdown("---")
     st.markdown("""
@@ -178,16 +165,15 @@ if ask_btn:
     <b>🩺 Crop Doctor</b> → Groq Llama-3.3-70b + crop disease knowledge base skill<br>
     <b>🌤️ Weather Scout</b> → Open-Meteo weather API tool (MCP pattern)<br>
     <b>📊 Market Advisor</b> → data.gov.in Agmarknet API + MSP 2024-25 database<br>
-    <b>⚡ Parallel Execution</b> → all 3 agents run simultaneously via ThreadPoolExecutor<br>
-    <b>🔒 Security</b> → API keys in .env, never hardcoded
+    <b>Parallel Execution</b> → all 3 agents run simultaneously via ThreadPoolExecutor<br>
+    <b>Security</b> → API keys in .env / Streamlit secrets, never hardcoded
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center;color:#aaa;font-size:0.78rem;padding-bottom:1rem'>"
-    "FarmSense · Built for Kaggle AI Agents Capstone 2026 · Agents for Good Track · "
-    "Powered by Groq Llama-3.3-70b"
+    "FarmSense · Kaggle AI Agents Capstone 2026 · Agents for Good · Powered by Groq Llama-3.3-70b"
     "</div>",
     unsafe_allow_html=True
 )
